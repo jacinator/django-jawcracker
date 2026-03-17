@@ -12,5 +12,8 @@ dependencies = [
     "polib",
 ]
 
+[tool.setuptools.package-data]
+jawcracker = ["templates/**/*", "static/**/*"]
+
 [tool.setuptools.packages.find]
 include = ["jawcracker*"]
