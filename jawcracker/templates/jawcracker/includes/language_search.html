@@ -1,0 +1,10 @@
+{% load i18n %}
+
+<div id="search" class="jawcracker-search"{% if oob %} hx-swap-oob="morph"{% endif %}>
+  {% url "jawcracker-language-list" as target %}
+  <form hx-get="{{ target }}" hx-trigger="input delay:450ms" hx-target="#list">
+    <label for="id_search">{% include "jawcracker/svgs/magnifying-glass.svg" %}</label>
+    <input type="search" name="q" id="id_search" placeholder="{% translate "Search languages" %}" value="{{ q }}">
+  </form>
+  <button type="button" hx-get="{{ target }}" hx-target="#list">{% include "jawcracker/svgs/x-mark.svg" %}</button>
+</div>

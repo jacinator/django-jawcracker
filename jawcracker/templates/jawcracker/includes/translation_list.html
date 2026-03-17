@@ -1,0 +1,12 @@
+{% load i18n %}
+
+<div id="list" class="jawcracker-list"{% if oob %} hx-swap-oob="morph"{% endif %}>
+  <div class="translation-list">
+    {% for item in translations %}
+      <a hx-get="{{ item.get_absolute_url }}?q={{ q }}" hx-target="#detail" class="translation-item {% if item == translation %}active{% endif %}">
+        <span class="translation-msgid">{{ item.entry.msgid|truncatechars:88 }}</span>
+        <span class="translation-msgstr">{{ item.entry.msgstr|truncatechars:88 }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>

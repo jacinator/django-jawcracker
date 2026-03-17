@@ -1,0 +1,44 @@
+{% load i18n %}
+
+<div id="detail" class="jawcracker-detail language-detail">
+  <div class="language-header">
+    <h1>{{ language|title }}</h1>
+    <span class="language-code">{{ language.language_name }}</span>
+  </div>
+
+  <div class="language-progress">
+    <div class="progress-bar">
+      <div class="progress-translated" style="width: {{ language.percent }}%"></div>
+    </div>
+    <span class="progress-label">{% blocktranslate with percent=language.percent %}{{ percent }}% translated{% endblocktranslate %}</span>
+  </div>
+
+  <dl class="language-stats">
+    <div class="language-stat">
+      {% blocktranslate with number=language.total trimmed %}
+        <dt>Total</dt>
+        <dd>{{ number }}</dd>
+      {% endblocktranslate %}
+    </div>
+    <div class="language-stat">
+      {% blocktranslate with number=language.translated trimmed %}
+        <dt>Translated</dt>
+        <dd>{{ number }}</dd>
+      {% endblocktranslate %}
+    </div>
+    <div class="language-stat">
+      {% blocktranslate with number=language.fuzzy trimmed %}
+        <dt>Fuzzy</dt>
+        <dd>{{ number }}</dd>
+      {% endblocktranslate %}
+    </div>
+    <div class="language-stat">
+      {% blocktranslate with number=language.untranslated trimmed %}
+        <dt>Untranslated</dt>
+        <dd>{{ number }}</dd>
+      {% endblocktranslate %}
+    </div>
+  </dl>
+
+  <a href="{% url "jawcracker-translation-list" language_id=language.language_name %}" class="btn">{% translate "Translate" %}</a>
+</div>

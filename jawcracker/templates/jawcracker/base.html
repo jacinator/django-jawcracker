@@ -1,0 +1,42 @@
+{% load i18n %}
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ jawcracker.title }}</title>
+
+    <link rel="stylesheet" href="{% static "jawcracker/jawcracker.css" %}">
+    <style>:root { --jawcracker-primary: {{ jawcracker.primary }} }</style>
+
+    <script src="{% static "jawcracker/htmx.min.js" %}"></script>
+    <script src="{% static "jawcracker/idiomorph-ext.min.js" %}"></script>
+  </head>
+  <body>
+    {% block body %}
+      <div class="jawcracker-layout" hx-ext="morph" hx-swap="outerHTML">
+        <header class="jawcracker-header">
+          <a href="{% url "jawcracker-language-list" %}" class="jawcracker-title">{{ jawcracker.title }}</a>
+          {% if language %}
+            <p class="jawcracker-language">{{ language|title }} - {{ language.language_name }}</p>
+          {% endif %}
+        </header>
+        {% block search %}
+          <div id="search" class="jawcracker-search">
+          </div>
+        {% endblock search %}
+        {% block list %}
+          <div id="list" class="jawcracker-list">
+          </div>
+        {% endblock %}
+        {% block detail %}
+          <div id="detail" class="jawcracker-detail">
+          </div>
+        {% endblock %}
+      </div>
+    {% endblock body %}
+  </body>
+</html>

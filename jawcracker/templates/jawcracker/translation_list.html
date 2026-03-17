@@ -1,0 +1,25 @@
+{% extends "jawcracker/base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block body %}
+  {{ block.super }}
+  <ul class="jawcracker-toast-list">
+    <li id="toast-saved" class="jawcracker-toast">Saved!</li>
+  </ul>
+  <script src="{% static "jawcracker/jawcracker.js" %}" defer></script>
+{% endblock body %}
+
+{% block search %}
+  {% include "jawcracker/includes/translation_search.html" %}
+{% endblock search %}
+
+{% block list %}
+  {% include "jawcracker/includes/translation_list.html" %}
+{% endblock list %}
+
+{% block detail %}
+  <div id="detail" class="jawcracker-detail empty">
+    <p>{% translate "Select a translation." %}</p>
+  </div>
+{% endblock detail %}

@@ -1,0 +1,424 @@
+:root {
+  --jawcracker-light: #ffffff;
+  --jawcracker-dark: #000000;
+  --jawcracker-subtle: color-mix(in srgb, white, black 35%);
+  --jawcracker-subtle-bg: color-mix(in srgb, white, black 10%);
+
+  --jawcracker-gap-x: 1rem;
+  --jawcracker-gap-y: 1rem;
+  --jawcracker-gap: var(--jawcracker-gap-y) var(--jawcracker-gap-x);
+
+  --jawcracker-radius: 0.25rem;
+  --jawcracker-padding-x: 1rem;
+  --jawcracker-padding-y: 0.5rem;
+  --jawcracker-padding: var(--jawcracker-padding-y) var(--jawcracker-padding-x);
+
+  --jawcracker-fs-lg: 1.1rem;
+  --jawcracker-fs-md: 1rem;
+  --jawcracker-fs-sm: 0.9rem;
+
+  --jawcracker-button-bg: var(--jawcracker-primary);
+  --jawcracker-button-border: var(--jawcracker-primary);
+  --jawcracker-button-focus-bg: color-mix(in srgb, var(--jawcracker-primary), black 15%);
+  --jawcracker-button-focus-shadow: 0 0 0 4px color-mix(in srgb, transparent, var(--jawcracker-primary) 25%);
+
+  --jawcracker-input-border: 1px solid color-mix(in srgb, var(--jawcracker-light), black 15%);
+  --jawcracker-input-focus-border: 1px solid var(--jawcracker-primary);
+  --jawcracker-input-focus-shadow: var(--jawcracker-button-focus-shadow);
+  --jawcracker-input-padding-x: calc(var(--jawcracker-padding-x) * 0.75);
+  --jawcracker-input-padding-y: calc(var(--jawcracker-padding-y) * 0.75);
+  --jawcracker-input-padding: var(--jawcracker-input-padding-y) var(--jawcracker-input-padding-x);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: color-mix(in srgb, var(--jawcracker-light), var(--jawcracker-primary) 5%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: var(--jawcracker-fs-md);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--jawcracker-primary);
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  :hover {
+    color: color-mix(in srgb, var(--jawcracker-primary), black 15%);
+  }
+}
+
+input,
+textarea {
+  border: var(--jawcracker-input-border);
+  border-radius: var(--jawcracker-radius);
+  color: var(--jawcracker-dark);
+  font-size: var(--jawcracker-fs-sm);
+  outline: none;
+  padding: var(--jawcracker-input-padding);
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+
+  &:focus-visible {
+    border: var(--jawcracker-input-focus-border);
+    box-shadow: var(--jawcracker-input-focus-shadow);
+  }
+}
+
+.btn,
+button {
+  background-color: var(--jawcracker-button-bg);
+  border: 1px solid var(--jawcracker-button-border);
+  border-radius: var(--jawcracker-radius);
+  color: var(--jawcracker-light);
+  cursor: pointer;
+  font-size: var(--jawcracker-fs-md);
+  padding: var(--jawcracker-padding);
+  text-decoration: none;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    background-color: var(--jawcracker-button-focus-bg);
+  }
+  &:focus-visible {
+    box-shadow: var(--jawcracker-input-focus-shadow);
+    outline: none;
+  }
+}
+
+.jawcracker-toast-list {
+  position: fixed;
+  top: var(--jawcracker-padding-y);
+  right: var(--jawcracker-padding-x);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--jawcracker-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 15rem;
+
+  .jawcracker-toast {
+    background-color: var(--jawcracker-light);
+    border: 1px solid var(--jawcracker-primary);
+    border-radius: var(--jawcracker-radius);
+    opacity: 0;
+    padding: var(--jawcracker-padding);
+    transition: opacity 0.15s ease;
+
+    &.show {
+      opacity: 1;
+    }
+  }
+}
+
+.jawcracker-layout {
+  display: grid;
+  grid-template-columns: var(--jawcracker-gap-x) 1fr var(--jawcracker-gap-x) 1fr var(--jawcracker-gap-x);
+  grid-template-rows: min-content var(--jawcracker-gap-y) min-content var(--jawcracker-gap-y) 1fr var(--jawcracker-gap-y);
+
+  height: 100vh;
+  width: 100vw;
+
+  .jawcracker-header {
+    grid-column: 1 / 6;
+    grid-row: 1;
+  }
+  .jawcracker-search {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .jawcracker-list {
+    grid-column: 2;
+    grid-row: 5;
+
+    overflow-y: hidden;
+  }
+  .jawcracker-detail {
+    grid-column: 4;
+    grid-row: 3 / 6;
+  }
+}
+
+.jawcracker-header {
+  align-items: center;
+  background-color: var(--jawcracker-primary);
+  color: var(--jawcracker-light);
+  display: flex;
+  gap: var(--jawcracker-gap);
+  padding: var(--jawcracker-padding);
+
+  .jawcracker-title {
+    color: inherit;
+    font-size: var(--jawcracker-fs-lg);
+    font-weight: 600;
+    margin: 0;
+    text-decoration: none;
+
+    &:hover {
+      color: color-mix(in srgb, var(--jawcracker-light), black 15%);
+    }
+  }
+  .jawcracker-language {
+    margin: 0;
+  }
+}
+
+.jawcracker-search {
+  display: flex;
+  position: relative;
+
+  & > button {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    border-radius: 0 var(--jawcracker-radius) var(--jawcracker-radius) 0;
+    margin-left: -1px;
+    padding: var(--jawcracker-input-padding);
+    position: relative;
+    z-index: 2;
+
+    &:focus-visible {
+      z-index: 3;
+    }
+  }
+  & > form {
+    display: flex;
+    flex-grow: 1;
+    flex-shrink: 1;
+
+    background-color: var(--jawcracker-light);
+    border: var(--jawcracker-input-border);
+    border-radius: var(--jawcracker-radius) 0 0 var(--jawcracker-radius);
+    position: relative;
+    transition: border 0.15s ease, box-shadow 0.15s ease;
+    z-index: 1;
+
+    &:focus-within {
+      border: var(--jawcracker-input-focus-border);
+      box-shadow: var(--jawcracker-input-focus-shadow);
+      z-index: 3;
+    }
+
+    & > input {
+      flex-grow: 1;
+      flex-shrink: 1;
+
+      background-color: transparent;
+      box-shadow: none;
+      border: none;
+    }
+    & > label {
+      flex-grow: 0;
+      flex-shrink: 0;
+
+      padding: var(--jawcracker-input-padding-y) 0 var(--jawcracker-input-padding-y) var(--jawcracker-input-padding-x);
+    }
+  }
+}
+
+.jawcracker-detail {
+  display: flex;
+  justify-content: center;
+
+  &.empty {
+    align-items: center;
+    color: var(--jawcracker-subtle);
+  }
+  &.language-detail,
+  &.translation-detail {
+    background-color: var(--jawcracker-light);
+    border-radius: var(--jawcracker-radius);
+    padding: var(--jawcracker-padding);
+  }
+}
+
+.language-detail {
+  flex-direction: column;
+  gap: var(--jawcracker-gap);
+  justify-content: flex-start;
+
+  .language-header {
+    align-items: baseline;
+    display: flex;
+    gap: 0.5rem;
+
+    h1 {
+      font-size: var(--jawcracker-fs-lg);
+      margin: 0;
+    }
+    .language-code {
+      color: var(--jawcracker-subtle);
+      font-size: var(--jawcracker-fs-sm);
+    }
+  }
+  .language-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .progress-bar {
+    background-color: var(--jawcracker-subtle-bg);
+    border-radius: var(--jawcracker-radius);
+    height: 0.5rem;
+    overflow: hidden;
+  }
+  .progress-translated {
+    background-color: var(--jawcracker-primary);
+    border-radius: var(--jawcracker-radius);
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .progress-label {
+    color: var(--jawcracker-subtle);
+    font-size: var(--jawcracker-fs-sm);
+  }
+  .language-stats {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, 1fr);
+    margin: 0;
+  }
+  .language-stat {
+    background-color: var(--jawcracker-subtle-bg);
+    border-radius: var(--jawcracker-radius);
+    padding: var(--jawcracker-input-padding);
+
+    dt {
+      color: var(--jawcracker-subtle);
+      font-size: var(--jawcracker-fs-sm);
+    }
+    dd {
+      font-weight: 600;
+      margin: 0;
+    }
+  }
+  .btn {
+    align-self: flex-start;
+  }
+}
+
+.translation-detail {
+  flex-direction: column;
+  gap: var(--jawcracker-gap);
+  justify-content: flex-start;
+
+  &:focus-visible {
+    outline: none;
+  }
+  .translation-meta {
+    background-color: var(--jawcracker-subtle-bg);
+    border-radius: var(--jawcracker-radius);
+    display: grid;
+    gap: 0.25rem 0.75rem;
+    grid-template-columns: auto 1fr;
+    margin: 0;
+    padding: var(--jawcracker-input-padding);
+
+    dt {
+      color: var(--jawcracker-subtle);
+      font-size: var(--jawcracker-fs-sm);
+    }
+    dd {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      margin: 0;
+    }
+    code {
+      font-size: var(--jawcracker-fs-sm);
+    }
+  }
+  .translation-label {
+    color: var(--jawcracker-subtle);
+    display: block;
+    font-size: var(--jawcracker-fs-sm);
+    font-weight: 600;
+    margin-bottom: calc(var(--jawcracker-padding-y) * 0.25);
+  }
+  .translation-source pre {
+    background-color: var(--jawcracker-subtle-bg);
+    border: var(--jawcracker-input-border);
+    border-radius: var(--jawcracker-radius);
+    cursor: default;
+    font-size: var(--jawcracker-fs-sm);
+    margin: 0;
+    padding: var(--jawcracker-input-padding);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .translation-form {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--jawcracker-gap-y) * 0.5);
+
+    button {
+      align-self: flex-start;
+    }
+  }
+  .translation-saved {
+    color: var(--jawcracker-primary);
+    font-size: var(--jawcracker-fs-sm);
+    font-weight: 600;
+  }
+  .translation-tip {
+    color: var(--jawcracker-subtle);
+    font-size: var(--jawcracker-fs-sm);
+    margin: auto 0 0 0;
+  }
+}
+
+.translation-list,
+.language-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--jawcracker-gap-y) * 0.75) calc(var(--jawcracker-gap-x) * 0.75);
+  max-height: 100%;
+  overflow-y: scroll;
+
+  .translation-item,
+  .language-item {
+    background-color: var(--jawcracker-light);
+    border-left: var(--jawcracker-radius) solid transparent;
+    border-radius: var(--jawcracker-radius);
+    padding: var(--jawcracker-padding);
+    transition: border-color 0.15s ease;
+
+    &:hover,
+    &.active {
+      border-color: var(--jawcracker-primary);
+    }
+
+    &.language-item {
+      .language-code {
+        color: var(--jawcracker-subtle);
+        display: block;
+        font-size: var(--jawcracker-fs-sm);
+      }
+      .language-name {
+        display: block;
+      }
+    }
+    &.translation-item {
+      display: grid;
+      gap: var(--jawcracker-gap-x);
+      grid-template-columns: repeat(2, 1fr);
+      height: 4rem;
+      flex-shrink: 0;
+
+      .translation-msgid {
+        grid-column: 1;
+      }
+      .translation-msgstr {
+        color: var(--jawcracker-subtle);
+        grid-column: 2;
+      }
+    }
+  }
+}

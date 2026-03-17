@@ -1,0 +1,52 @@
+{% load i18n %}
+
+<div id="detail" class="jawcracker-detail translation-detail" tabindex="-1">
+  {% with entry=translation.entry %}
+    <div class="translation-source">
+      <span class="translation-label">{% translate "Message" %}</span>
+      <pre>{{ entry.msgid }}</pre>
+    </div>
+    {% if entry.msgid_plural %}
+      <div class="translation-source">
+        <span class="translation-label">{% translate "Plural" %}</span>
+        <pre>{{ entry.msgid_plural }}</pre>
+      </div>
+    {% endif %}
+
+    <form class="translation-form" hx-post="{{ translation.get_absolute_url }}?q={{ q }}" hx-target="#detail" hx-swap="outerHTML">
+      {% csrf_token %}
+      {% if entry.msgid_plural %}
+        {% for key, value in entry.msgstr_plural.items %}
+          <div class="translation-field">
+            <label class="translation-label" for="msgstr_{{ key }}">{% blocktranslate with n=key trimmed %}Plural form {{ n }}{% endblocktranslate %}</label>
+            <textarea id="msgstr_{{ key }}" name="msgstr_{{ key }}" rows="3">{{ value }}</textarea>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="translation-field">
+          <label class="translation-label" for="msgstr">{% translate "Translation" %}</label>
+          <textarea id="msgstr" name="msgstr" rows="3">{{ entry.msgstr }}</textarea>
+        </div>
+      {% endif %}
+      <button type="submit">{% translate "Save" %}</button>
+    </form>
+
+    {% if entry.msgctxt or entry.flags or entry.occurrences %}
+      <dl class="translation-meta">
+        {% if entry.msgctxt %}
+          <dt>{% translate "Context" %}</dt>
+          <dd><code>{{ entry.msgctxt }}</code></dd>
+        {% endif %}
+        {% if entry.flags %}
+          <dt>{% translate "Flags" %}</dt>
+          <dd>{% for flag in entry.flags %}<code>{{ flag }}</code>{% if not forloop.last %} {% endif %}{% endfor %}</dd>
+        {% endif %}
+        {% if entry.occurrences %}
+          <dt>{% translate "Occurrences" %}</dt>
+          <dd>{% for file, line in entry.occurrences %}<code>{{ file }}:{{ line }}</code>{% if not forloop.last %} {% endif %}{% endfor %}</dd>
+        {% endif %}
+      </dl>
+    {% endif %}
+  {% endwith %}
+  <p class="translation-tip">{% blocktranslate with next_key="j" previous_key="k" %}Use <kbd>{{ next_key }}</kbd>/<kbd>{{ previous_key }}</kbd> to navigate between translations.{% endblocktranslate %}</p>
+</div>
