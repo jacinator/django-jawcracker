@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import suppress
 from dataclasses import dataclass, field
 from hashlib import sha256
-from itertools import pairwise
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from django.conf import settings
+from django.core.cache import cache
 from django.urls import reverse_lazy
 from django.utils.functional import SimpleLazyObject
 from django.utils.translation import get_language_info, to_language, to_locale
@@ -24,10 +25,10 @@ class Language:
     language_name: str  # en-us
     locale_name: str  # en_US
     path: Path  # local/en_US/LC_MESSAGES/django.po
-    _pofile: POFile = field(init=False, repr=False, compare=False)
+    pofile: POFile = field(compare=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "_pofile", SimpleLazyObject(lambda: pofile(self.path)))
+        object.__setattr__(self, "pofile", SimpleLazyObject(lambda: pofile(self.path)))
 
     def __str__(self) -> str:  # English
         try:
@@ -51,45 +52,46 @@ class Language:
 
     @property
     def total(self) -> int:
-        return len(self._pofile)
+        return len(self.pofile)
 
     @property
     def translated(self) -> int:
-        return len(self._pofile.translated_entries())
+        return len(self.pofile.translated_entries())
 
     @property
     def fuzzy(self) -> int:
-        return len(self._pofile.fuzzy_entries())
+        return len(self.pofile.fuzzy_entries())
 
     @property
     def untranslated(self) -> int:
-        return len(self._pofile.untranslated_entries())
+        return len(self.pofile.untranslated_entries())
 
     @property
     def percent(self) -> int:
-        return self._pofile.percent_translated()
+        return self.pofile.percent_translated()
 
 
-def _default_paths() -> dict[str, Path]:
-    return SimpleLazyObject(
-        lambda: {
+@dataclass(frozen=True, slots=True)
+class LanguageManager(Mapping[str, Language]):
+    _paths: dict[str, Path]
+
+    @staticmethod
+    def get_paths() -> dict[str, Path]:
+        return {
             z.parent.parent.name: z
             for x in settings.LOCALE_PATHS
             if (y := Path(x)).is_dir()
             for z in y.glob("*/LC_MESSAGES/django.po")
         }
-    )
 
-
-@dataclass(frozen=True, slots=True)
-class LanguageManager(Mapping[str, Language]):
-    _paths: dict[str, Path] = field(default_factory=_default_paths, init=False)
+    def __init__(self) -> None:
+        object.__setattr__(self, "_paths", SimpleLazyObject(LanguageManager.get_paths))
 
     def __getitem__(self, language_name: str) -> Language:
         locale_name = to_locale(language_name)
         return Language(language_name, locale_name, self._paths[locale_name])
 
-    def __iter__(self) -> Iterator[Language]:
+    def __iter__(self) -> Iterator[str]:
         return (to_language(x) for x in self._paths)
 
     def __len__(self) -> int:
@@ -126,40 +128,47 @@ class Translation:
         )
 
 
+Index: TypeAlias = dict[str, tuple[int, str | None, str | None]]
+
+
 @dataclass(frozen=True, slots=True)
 class TranslationManager(Mapping[str, Translation]):
     language: Language
-    pofile: POFile
+    pofile: POFile = field(compare=False, init=False, repr=False)
+    _index: Index = field(compare=False, init=False, repr=False)
 
-    def __init__(self, language: Language) -> None:
-        object.__setattr__(self, "language", language)
-        object.__setattr__(
-            self, "pofile", SimpleLazyObject(lambda: pofile(language.path))
-        )
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "pofile", self.language.pofile)
+        object.__setattr__(self, "_index", SimpleLazyObject(self._get_index))
 
-    def __iter__(self) -> Iterator[Translation]:
-        for entry in self.pofile:
-            yield Translation.hash(entry)
+    def __getitem__(self, hash_: str) -> Translation:
+        index, _, _ = self._index[hash_]
+        return Translation(self.language, self.pofile[index])
 
-    def __getitem__(self, translation_hash: str) -> Translation:
-        try:
-            return next(
-                Translation(self.language, x)
-                for x in self.pofile
-                if Translation.hash(x) == translation_hash
-            )
-        except StopIteration as e:
-            raise KeyError from e
+    def __iter__(self) -> Iterator[str]:
+        yield from self._index
 
     def __len__(self) -> int:
-        return len(self.pofile)
+        return len(self._index)
 
-    def get_next(self, translation_hash: str) -> str | None:
-        for a, b in pairwise(self.pofile):
-            if Translation.hash(a) == translation_hash:
-                return Translation.hash(b)
+    def _get_index(self) -> Index:
+        def cache_value() -> Index:
+            hashes = [Translation.hash(entry) for entry in self.pofile]
+            n = len(hashes)
+            return {
+                h: (i, hashes[(i + 1) % n], hashes[(i - 1 + n) % n])
+                for i, h in enumerate(hashes)
+            }
 
-    def get_previous(self, translation_hash: str) -> str | None:
-        for a, b in pairwise(self.pofile):
-            if Translation.hash(b) == translation_hash:
-                return Translation.hash(a)
+        mtime: float = self.language.path.stat().st_mtime
+        cache_key: str = f"jawcracker:index:{self.language.path}:{mtime}"
+
+        return cache.get_or_set(cache_key, cache_value)
+
+    def get_next(self, hash_: str) -> str | None:
+        with suppress(KeyError, TypeError):
+            return self._index[hash_][1]
+
+    def get_previous(self, hash_: str) -> str | None:
+        with suppress(KeyError, TypeError):
+            return self._index[hash_][2]
