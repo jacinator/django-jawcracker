@@ -4,6 +4,7 @@ import json
 from enum import IntFlag, auto
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from django.db.models import Q
 from django.http import Http404
 from django.urls import reverse
 from django.utils.functional import cached_property
@@ -11,16 +12,14 @@ from django.utils.translation import gettext as _
 from django.views import generic
 
 from .conf import settings
-from .objects import LanguageManager, TranslationManager
+from .forms import TranslationForm
+from .models import Language, Translation
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
+    from django.db.models import QuerySet
     from django.http import HttpRequest, HttpResponse
-    from polib import POEntry
 
     from .conf import Settings
-    from .objects import Language, Translation
 
 
 class LanguageListView(generic.TemplateView):
@@ -32,13 +31,15 @@ class LanguageListView(generic.TemplateView):
         kwargs.setdefault("q", self.query)
         return super().get_context_data(**kwargs)
 
-    def get_languages(self) -> Iterable[Language]:
-        items: Iterable[Language] = self.languages.values()
+    def get_languages(self) -> QuerySet[Language]:
+        qs: QuerySet[Language] = Language.objects.all()
 
         if query := self.query:
-            items = (x for x in items if query in x)
+            qs = qs.filter(
+                Q(language_name__icontains=query) | Q(locale_name__icontains=query)
+            )
 
-        return items
+        return qs
 
     def get_template_names(self) -> list[str]:
         if self.htmx:
@@ -53,10 +54,6 @@ class LanguageListView(generic.TemplateView):
     def query(self) -> str:
         return self.request.GET.get("q", "").strip()
 
-    @cached_property
-    def languages(self) -> LanguageManager:
-        return LanguageManager()
-
 
 class LanguageDetailView(LanguageListView):
     template_name: ClassVar[str] = "language_detail.html"
@@ -68,8 +65,10 @@ class LanguageDetailView(LanguageListView):
     @cached_property
     def language(self) -> Language:
         try:
-            return self.languages[self.kwargs["language_id"]]
-        except KeyError as e:
+            return Language.objects.get(
+                language_name=self.kwargs["language_id"],
+            )
+        except Language.DoesNotExist as e:
             raise Http404(_("No language found")) from e
 
 
@@ -79,14 +78,6 @@ class Category(IntFlag):
     TRANSLATED = auto()
     UNTRANSLATED = auto()
 
-    def filter(self, entry: POEntry) -> bool:
-        return (
-            (self is Category.ALL)
-            or (self is Category.FUZZY and entry.fuzzy)
-            or (self is Category.TRANSLATED and entry.translated and not entry.fuzzy)
-            or (self is Category.UNTRANSLATED and not entry.translated)
-        )
-
 
 class TranslationListView(LanguageDetailView):
     template_name: ClassVar[str] = "translation_list.html"
@@ -95,13 +86,27 @@ class TranslationListView(LanguageDetailView):
         kwargs.setdefault("translations", self.get_translations())
         return super().get_context_data(**kwargs)
 
-    def get_translations(self) -> Iterable[Translation]:
-        items: Iterable[Translation] = self.translations.values()
+    def get_translations(self) -> QuerySet[Translation]:
+        qs: QuerySet[Translation] = Translation.objects.filter(
+            language=self.language
+        ).order_by("order")
+
+        cat = self.category
+        if cat is Category.FUZZY:
+            qs = qs.filter(is_fuzzy=True)
+        elif cat is Category.TRANSLATED:
+            qs = qs.filter(is_translated=True, is_fuzzy=False)
+        elif cat is Category.UNTRANSLATED:
+            qs = qs.filter(is_translated=False)
 
         if query := self.query:
-            items = (x for x in items if query in x)
+            qs = qs.filter(
+                Q(msgid__icontains=query)
+                | Q(msgid_plural__icontains=query)
+                | Q(msgstr__icontains=query)
+            )
 
-        return (x for x in items if self.category.filter(x.entry))
+        return qs
 
     @property
     def category(self) -> Category:
@@ -110,46 +115,84 @@ class TranslationListView(LanguageDetailView):
         except KeyError:
             return Category.ALL
 
-    @cached_property
-    def translations(self) -> TranslationManager:
-        return TranslationManager(self.language)
 
-
-class TranslationDetailView(TranslationListView):
+class TranslationDetailView(TranslationListView, generic.UpdateView):
     template_name: ClassVar[str] = "translation_detail.html"
+    form_class: ClassVar[type] = TranslationForm
+
+    def get_object(self, queryset=None) -> Translation:
+        return self.translation
+
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.object = self.get_object()
+        return self.render_to_response(self.get_context_data(**kwargs))
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        return self.form_invalid(form)
+
+    def form_valid(self, form: TranslationForm) -> HttpResponse:
+        self.object = form.save()
+        translation = Translation.objects.select_related("language").get(
+            pk=self.object.pk,
+        )
+        return self.render_to_response(
+            self.get_context_data(
+                translation=translation,
+                form=TranslationForm(instance=translation),
+            )
+        )
+
+    def form_invalid(self, form: TranslationForm) -> HttpResponse:
+        return self.render_to_response(self.get_context_data(form=form))
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         kwargs.setdefault("translation", self.translation)
+        kwargs.setdefault("form", self.get_form())
         return super().get_context_data(**kwargs)
 
-    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        if self.translation.entry.msgid_plural:
-            self.translation.entry.msgstr_plural |= {
-                int(x.removeprefix("msgstr_")): y
-                for x, y in request.POST.items()
-                if x.startswith("msgstr_")
-            }
-        else:
-            self.translation.entry.msgstr = request.POST.get("msgstr", "")
+    def hx_trigger(self) -> dict[str, Any]:
+        current_order = self.translation.order
+        language = self.language
 
-        if "fuzzy" in self.translation.entry.flags:
-            self.translation.entry.flags.remove("fuzzy")
+        next_hash = (
+            Translation.objects.filter(language=language, order__gt=current_order)
+            .order_by("order")
+            .values_list("hash", flat=True)
+            .first()
+        )
+        prev_hash = (
+            Translation.objects.filter(language=language, order__lt=current_order)
+            .order_by("-order")
+            .values_list("hash", flat=True)
+            .first()
+        )
 
-        self.translations.pofile.save()
-        translation: Translation = self.translations[kwargs["translation_id"]]
+        # Circular wrap-around
+        if next_hash is None:
+            next_hash = (
+                Translation.objects.filter(language=language)
+                .order_by("order")
+                .values_list("hash", flat=True)
+                .first()
+            )
+        if prev_hash is None:
+            prev_hash = (
+                Translation.objects.filter(language=language)
+                .order_by("-order")
+                .values_list("hash", flat=True)
+                .first()
+            )
 
-        return super().get(request, *args, translation=translation, **kwargs)
+        next_url = self._get_url(next_hash) if next_hash else None
+        prev_url = self._get_url(prev_hash) if prev_hash else None
 
-    def hx_trigger(self) -> dict[str, dict[str, str]]:
-        next_url: str | None = None
-        if next_id := self.translations.get_next(self.kwargs["translation_id"]):
-            next_url = self._get_url(next_id)
-
-        prev_url: str | None = None
-        if prev_id := self.translations.get_previous(self.kwargs["translation_id"]):
-            prev_url = self._get_url(prev_id)
-
-        event = {"jawcracker:detail": {"nextUrl": next_url, "prevUrl": prev_url}}
+        event: dict[str, Any] = {
+            "jawcracker:detail": {"nextUrl": next_url, "prevUrl": prev_url}
+        }
 
         if self.request.method == "POST":
             event["jawcracker:saved"] = True
@@ -161,9 +204,7 @@ class TranslationDetailView(TranslationListView):
     ) -> HttpResponse:
         if self.htmx:
             headers: dict[str, str] = response_kwargs.get("headers", {})
-
             headers.setdefault("HX-Trigger-After-Swap", json.dumps(self.hx_trigger()))
-
             response_kwargs["headers"] = headers
         return super().render_to_response(context, **response_kwargs)
 
@@ -178,4 +219,10 @@ class TranslationDetailView(TranslationListView):
 
     @cached_property
     def translation(self) -> Translation:
-        return self.translations[self.kwargs["translation_id"]]
+        try:
+            return Translation.objects.select_related("language").get(
+                language=self.language,
+                hash=self.kwargs["translation_id"],
+            )
+        except Translation.DoesNotExist as e:
+            raise Http404(_("No translation found")) from e

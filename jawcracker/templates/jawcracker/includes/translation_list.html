@@ -4,8 +4,8 @@
   <div class="translation-list">
     {% for item in translations %}
       <a hx-get="{{ item.get_absolute_url }}?q={{ q }}" hx-target="#detail" class="translation-item {% if item == translation %}active{% endif %}">
-        <span class="translation-msgid">{{ item.entry.msgid|truncatechars:88 }}</span>
-        <span class="translation-msgstr">{{ item.entry.msgstr|truncatechars:88 }}</span>
+        <span class="translation-msgid">{{ item.msgid|truncatechars:88 }}</span>
+        <span class="translation-msgstr">{{ item.msgstr|truncatechars:88 }}</span>
       </a>
     {% endfor %}
   </div>
